@@ -99,6 +99,7 @@ h1 { font-size: 26px; font-weight: 700; color: #f1f5f9; }
 .cp-print { padding: 10px 20px; border-radius: 8px; border: none; background: var(--brand-primary); color: #fff; cursor: pointer; font-weight: 600; margin: 0 8px 24px 32px; }
 
 @media(max-width:600px) { .two-col { grid-template-columns:1fr; } .two-assess { grid-template-columns:1fr; } .cp-grid { grid-template-columns:1fr; } }
+@media print { body{background:#fff!important;color:#111!important} #setupScreen,.key-bar,.btn-action,.drop-zone,#dropZone,.input-box{display:none!important} #results{color:#111!important} @page{margin:12mm} }
 @media print { #creditPaper { position: static; background: none; padding: 0; } .cp-close, .cp-print { display: none; } }
 </style>
 <script>
@@ -494,7 +495,8 @@ function exportCSV() {
 function downloadPDF() {
   var el = document.getElementById('results');
   if (!el) return;
-  window.print();
+  try { window.focus(); window.print(); }
+  catch (e) { alert('Printing is blocked in this view. Open the app in its own browser tab (not a preview frame) and try again, then choose Save as PDF.'); }
 }
 
 // Credit Paper

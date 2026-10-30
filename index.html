@@ -1,0 +1,622 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bank Statement Analyser</title>
+<style>
+:root{--brand-primary:#366775;--brand-primary-dark:#2a5260;--brand-accent:#6FB9D5;--brand-positive:#5FC2A2}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Segoe UI', sans-serif; background: #0f172a; color: #e2e8f0; min-height: 100vh; }
+.page { max-width: 920px; margin: 0 auto; padding: 24px; }
+
+/* Setup screen */
+#setupScreen { display: flex; align-items: center; justify-content: center; min-height: 100vh; }
+.setup-box { background: #1e293b; border-radius: 14px; padding: 40px; max-width: 480px; width: 100%; border: 1px solid #334155; }
+.setup-logo { font-size: 11px; color: #64748b; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 6px; }
+.setup-title { font-size: 24px; font-weight: 700; color: #f1f5f9; margin-bottom: 8px; }
+.setup-desc { font-size: 13px; color: #94a3b8; line-height: 1.6; margin-bottom: 24px; }
+.setup-label { font-size: 12px; color: var(--brand-accent); font-weight: 700; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; display: block; }
+.setup-input { width: 100%; padding: 12px 14px; background: #0f172a; border: 1px solid #334155; border-radius: 8px; color: #e2e8f0; font-size: 14px; font-family: monospace; margin-bottom: 16px; }
+.setup-input:focus { outline: none; border-color: var(--brand-primary); }
+.setup-btn { width: 100%; padding: 13px; border-radius: 8px; border: none; background: linear-gradient(135deg, var(--brand-primary), var(--brand-primary-dark)); color: #fff; font-size: 15px; font-weight: 600; cursor: pointer; }
+.setup-btn:hover { opacity: 0.9; }
+.setup-err { background: #450a0a; color: #fca5a5; padding: 10px 14px; border-radius: 8px; font-size: 13px; margin-bottom: 14px; display: none; }
+
+/* Main app */
+#mainApp { display: none; }
+.hdr-sub { font-size: 11px; letter-spacing: 2px; color: #64748b; text-transform: uppercase; margin-bottom: 4px; }
+h1 { font-size: 26px; font-weight: 700; color: #f1f5f9; }
+.hdr-p { margin-top: 6px; color: #94a3b8; font-size: 13px; margin-bottom: 24px; }
+.key-bar { background: #1e293b; border-radius: 8px; padding: 8px 14px; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center; font-size: 12px; color: #475569; }
+.key-bar button { background: none; border: none; color: var(--brand-accent); cursor: pointer; font-size: 12px; }
+
+.drop { border: 2px dashed #1a4d6d; border-radius: 10px; padding: 28px 24px; text-align: center; cursor: pointer; background: #e6f2ff; margin-bottom: 14px; transition: all 0.2s; }
+.drop.over { border-color: #0066cc; background: #cce0ff; }
+.drop-icon { font-size: 30px; margin-bottom: 6px; }
+.drop-main { color: #1a4d6d; font-size: 14px; }
+.drop-main span { color: #0066cc; font-weight: 700; }
+.drop-sub { color: #1a4d6d; font-size: 12px; margin-top: 4px; }
+.file-item { display: flex; align-items: center; justify-content: space-between; background: #d1ebe3; border-radius: 8px; padding: 9px 14px; margin-bottom: 5px; font-size: 13px; color: #1a4d6d; }
+.file-item button { background: none; border: none; color: #dc2626; cursor: pointer; font-size: 16px; }
+.pwd-warn { background: #fffbeb; border: 1px solid #fcd34d; border-radius: 7px; padding: 9px 13px; font-size: 12px; color: #78350f; margin-top: 6px; }
+
+.input-box { background: #1e293b; border: 2px solid #1a4d6d; border-radius: 10px; padding: 14px 18px; margin-bottom: 14px; }
+.input-box label { display: block; font-size: 13px; font-weight: 700; color: var(--brand-accent); margin-bottom: 6px; }
+.input-box label span { font-weight: 400; color: #64748b; }
+.input-box input, .input-box textarea { width: 100%; padding: 10px 12px; border: 1px solid #334155; border-radius: 6px; font-size: 14px; background: #0f172a; color: #e2e8f0; font-family: inherit; }
+.input-box textarea { resize: vertical; line-height: 1.6; }
+.input-hint { font-size: 11px; color: var(--brand-positive); margin-top: 4px; }
+
+.err { background: #fee2e2; color: #991b1b; padding: 10px 14px; border-radius: 8px; font-size: 13px; margin-bottom: 14px; border: 1px solid #fca5a5; display: none; }
+.btn-analyse { width: 100%; padding: 13px; border-radius: 8px; border: none; font-size: 15px; font-weight: 600; cursor: pointer; margin-bottom: 28px; }
+.btn-analyse:not(:disabled) { background: #1a4d6d; color: #fff; }
+.btn-analyse:disabled { background: #1e293b; color: #475569; cursor: not-allowed; }
+
+/* Results */
+.btn-row { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; }
+.btn-action { padding: 10px 20px; border-radius: 8px; border: none; color: #fff; font-size: 14px; font-weight: 600; cursor: pointer; }
+.box { background: #1e293b; border-radius: 10px; padding: 16px 20px; margin-bottom: 14px; }
+.box.al { border-left: 3px solid; }
+.box-title { font-size: 12px; color: #64748b; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px; }
+.kv-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(155px, 1fr)); gap: 10px; }
+.kv-lbl { font-size: 11px; color: #475569; margin-bottom: 3px; }
+.kv-val { font-size: 14px; font-weight: 700; }
+.tx-row { display: flex; justify-content: space-between; padding: 7px 0; border-bottom: 1px solid #0f172a; font-size: 13px; color: #cbd5e1; }
+.tx-dt { color: #475569; margin-right: 8px; }
+.two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px; }
+.conduct-banner { background: #1e293b; border-radius: 10px; padding: 14px 20px; margin-bottom: 14px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; border-left: 4px solid; }
+.stat-big { font-size: 28px; font-weight: 800; }
+.stat-lbl { font-size: 11px; color: #64748b; }
+.two-assess { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 14px; }
+.assess-lbl { font-size: 11px; font-weight: 700; text-transform: uppercase; margin-bottom: 6px; }
+.assess-item { font-size: 13px; color: #94a3b8; padding: 4px 0; border-bottom: 1px solid #0f172a; }
+.rec-box { background: #0f172a; border-radius: 8px; padding: 12px 14px; }
+.rec-lbl { font-size: 11px; color: #475569; text-transform: uppercase; margin-bottom: 4px; }
+.rec-txt { font-size: 13px; color: #e2e8f0; line-height: 1.7; }
+.debt-tile { background: #0f172a; border-radius: 8px; padding: 10px 14px; display: flex; justify-content: space-between; align-items: center; }
+.debt-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 8px; }
+.rd-table { width: 100%; border-collapse: collapse; }
+.rd-table th { padding: 7px 10px; text-align: left; font-size: 11px; color: #f87171; text-transform: uppercase; letter-spacing: 1px; border-bottom: 1px solid #7f1d1d; background: #2d0000; }
+.rd-table td { padding: 8px 10px; font-size: 13px; border-bottom: 1px solid #7f1d1d; }
+.aml-flag { display: flex; align-items: center; gap: 8px; border-radius: 6px; padding: 7px 10px; font-size: 12px; }
+
+/* Credit Paper */
+#creditPaper { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 1000; overflow-y: auto; padding: 24px; }
+.cp-inner { background: #fff; color: #111; max-width: 800px; margin: 0 auto; border-radius: 10px; overflow: hidden; }
+.cp-header { background: #1a4d6d; color: #fff; padding: 24px 32px; }
+.cp-header h2 { font-size: 22px; margin-bottom: 4px; }
+.cp-header p { font-size: 13px; opacity: 0.8; }
+.cp-body { padding: 28px 32px; }
+.cp-section { margin-bottom: 22px; }
+.cp-section h3 { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: var(--brand-primary); border-bottom: 2px solid var(--brand-primary); padding-bottom: 4px; margin-bottom: 12px; }
+.cp-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 24px; }
+.cp-row { display: flex; justify-content: space-between; padding: 5px 0; border-bottom: 1px solid #f1f5f9; font-size: 13px; }
+.cp-row .lbl { color: #64748b; }
+.cp-row .val { font-weight: 600; }
+.cp-verdict { padding: 14px 18px; border-radius: 8px; margin-bottom: 16px; }
+.cp-close { padding: 10px 20px; border-radius: 8px; border: none; background: #dc2626; color: #fff; cursor: pointer; font-weight: 600; margin: 0 32px 24px; }
+.cp-print { padding: 10px 20px; border-radius: 8px; border: none; background: var(--brand-primary); color: #fff; cursor: pointer; font-weight: 600; margin: 0 8px 24px 32px; }
+
+@media(max-width:600px) { .two-col { grid-template-columns:1fr; } .two-assess { grid-template-columns:1fr; } .cp-grid { grid-template-columns:1fr; } }
+@media print { #creditPaper { position: static; background: none; padding: 0; } .cp-close, .cp-print { display: none; } }
+</style>
+<script>
+// ===== WHITE-LABEL CONFIG: edit this block only =====
+var BRAND = {
+  legalName: 'Your Company Name (Pty) Ltd',
+  appTitle: 'Bank Statement Analyser',
+  storageKey: 'wl_bank_analyser_api_key',
+  primary: '#366775', primaryDark: '#2a5260', accent: '#6FB9D5', positive: '#5FC2A2'
+};
+// =====================================================
+(function(){var r=document.documentElement.style;r.setProperty('--brand-primary',BRAND.primary);r.setProperty('--brand-primary-dark',BRAND.primaryDark);r.setProperty('--brand-accent',BRAND.accent);r.setProperty('--brand-positive',BRAND.positive);
+document.title=BRAND.appTitle+' | '+BRAND.legalName;
+document.addEventListener('DOMContentLoaded',function(){document.querySelectorAll('[data-brand=name]').forEach(function(e){e.textContent=BRAND.legalName});});})();
+</script>
+</head>
+<body>
+
+<!-- SETUP SCREEN -->
+<div id="setupScreen">
+  <div class="setup-box">
+    <div class="setup-logo" data-brand="name"></div>
+    <div class="setup-title">Bank Statement Analyser</div>
+    <div class="setup-desc">Enter your Anthropic API key to activate this tool. You only need to do this once — it will be remembered on this device.</div>
+    <div id="setupErr" class="setup-err">Invalid API key. Please check and try again.</div>
+    <label class="setup-label">Anthropic API Key</label>
+    <input type="password" id="keyInput" class="setup-input" placeholder="sk-ant-..." />
+    <button class="setup-btn" onclick="activateKey()">Activate Tool</button>
+  </div>
+</div>
+
+<!-- MAIN APP -->
+<div id="mainApp">
+<div class="page">
+  <div class="hdr-sub" data-brand="name"></div>
+  <h1>Bank Statement Analyser</h1>
+  <p class="hdr-p">Financial profile · Conduct assessment · AML screening · Credit view</p>
+
+  <div class="key-bar">
+    <span>🔑 API key active</span>
+    <button onclick="resetKey()">Change key</button>
+  </div>
+
+  <!-- Upload -->
+  <div class="drop" id="dropZone">
+    <div class="drop-icon">📄</div>
+    <div class="drop-main">Drag & drop PDF statements, or <span>click to browse</span></div>
+    <div class="drop-sub">Multiple files supported · PDF only</div>
+    <input type="file" id="fileInput" accept=".pdf" multiple style="display:none" onchange="addFiles(this.files)">
+  </div>
+  <div id="fileList"></div>
+  <div id="errBox" class="err"></div>
+
+  <!-- Rental -->
+  <div class="input-box">
+    <label>Proposed Monthly Rental (R) <span>— optional, for affordability assessment</span></label>
+    <input type="number" id="rentalInput" placeholder="e.g. 25000" oninput="updateRentalHint()">
+    <div class="input-hint" id="rentalHint"></div>
+  </div>
+
+  <!-- Analyst Comment -->
+  <div class="input-box">
+    <label>Analyst Comment <span>— optional, included in credit paper</span></label>
+    <textarea id="commentInput" rows="3" placeholder="e.g. Good repeat client, conservative OD usage..."></textarea>
+  </div>
+
+  <button class="btn-analyse" id="btnAnalyse" disabled onclick="analyse()">🔍 Analyse Statements</button>
+  <div id="results"></div>
+</div>
+</div>
+
+<!-- CREDIT PAPER -->
+<div id="creditPaper">
+  <div class="cp-inner" id="cpInner"></div>
+</div>
+
+<script>
+var files = [], lastResult = null;
+
+var SYSTEM = `CRITICAL INSTRUCTION: You MUST respond with ONLY a valid JSON object. No text before or after. No markdown.
+
+You are a senior credit analyst reviewing bank statements for credit purposes. Build a clear picture of income, cash flow, repayment behaviour, and overdraft conduct.
+
+RETURNED DEBITS — SCAN EVERY TRANSACTION FIRST:
+Look for: RD, R/D, RTD, RETURNED, UNPAID, REVERSAL, DECLINED, REJECTED, NSF, NOT PROVIDED FOR, DEBICHECK UNPAID, DEBICHECK REJECTED, NAEDO RETURN, UNPAID MAGTAPE ITEM.
+NEVER classify as RD: anything starting with FEE, balance notifications, credit transactions.
+If ANY RD: rd_count > 0, recommendation MUST start with "DECLINE - Returned debit(s) present.", overall_rating MUST be "POOR".
+
+HARDCORE OVERDRAFT — CRITICAL:
+If the account balance is ALWAYS negative (always Dr) and never returns to a positive/credit position during the entire statement period, this is hardcore OD usage.
+IF detected: overall_rating MUST be "POOR", recommendation MUST include "DECLINE — Chronic overdraft dependency.", conduct_notes MUST state the account never exits overdraft.
+
+STATEMENT RULES:
+1. Monthly repayment amount = OD repayment. Not an RD.
+2. Interest rate on statement = excess interest rate for overdraft_facility.excess_interest_rate_percent.
+3. Balance carry-overs between pages are correct. Do not flag.
+4. Read dates exactly as printed.
+
+EXCESSES: Only actual penalty charges for breaching OD limit. NOT OD interest.
+DEBT OBLIGATIONS: Identify recurring payments to banks, vehicle finance, home loans, credit cards, store accounts.
+INCOME: Exclude inter-account transfers from average_monthly_credits_excl_interaccount.
+
+Return ONLY valid JSON:
+{"bank_name":"string","account_holder":"string","account_number":"string","period":"string","currency":"string","income_profile":{"total_credits":number,"average_monthly_credits":number,"average_monthly_credits_excl_interaccount":number,"largest_single_credit":number,"primary_income_source":"string","income_regularity":"REGULAR or IRREGULAR or MIXED","income_trend":"STABLE or GROWING or DECLINING or VOLATILE","recurring_deposits_identified":true,"recurring_deposit_notes":"string or null"},"debit_profile":{"total_debits":number,"average_monthly_debits":number,"largest_single_debit":number,"debit_to_credit_ratio":number},"balance_profile":{"opening_balance":number,"closing_balance":number,"average_monthly_closing_balance":number,"lowest_balance_recorded":number,"lowest_balance_date":"string"},"overdraft_facility":{"in_place":true,"limit":null,"monthly_repayment":null,"excess_interest_rate_percent":null,"times_limit_breached":0,"breach_dates":[],"max_breach_amount":null},"debt_obligations":{"identified_debts":[{"lender":"string","description":"string","monthly_instalment":0,"frequency":"MONTHLY","missed_payments":0}],"total_monthly_debt_commitment":0,"debt_to_income_ratio":0,"largest_single_obligation":0,"largest_single_obligation_lender":"string","debt_summary_notes":"string"},"top_5_credits":[{"date":"string","amount":0,"description":"string"}],"excesses":[{"date":"string","amount":0,"description":"string"}],"returned_debits":[{"date":"string","amount":0,"description":"string"}],"credit_conduct_summary":{"overall_rating":"GOOD or SATISFACTORY or CONCERNING or POOR","rd_count":0,"excess_count":0,"conduct_notes":"string"},"fraud_flags":["string"],"credit_assessment":{"strengths":["string"],"concerns":["string"],"recommendation":"string"},"analyst_notes":"string","aml_risk":{"overall_rating":"LOW or MEDIUM or HIGH or CRITICAL","velocity_ratio":0,"pass_through_flag":false,"structuring_flag":false,"structuring_notes":null,"sanitised_references_pct":0,"sanitised_references_flag":false,"counterparty_concentration_flag":false,"top_recipients":[{"name":"string","total_paid":0,"transaction_count":0}],"split_round_number_flag":false,"split_round_number_examples":[],"commodity_cover_flag":false,"daily_drain_days_count":0,"daily_drain_flag":false,"triggered_indicators":[],"fica_recommendation":"string"}}`;
+
+// API Key management
+function getKey() { return localStorage.getItem(BRAND.storageKey); }
+function activateKey() {
+  var k = document.getElementById('keyInput').value.trim();
+  if (!k.startsWith('sk-ant-')) { document.getElementById('setupErr').style.display = 'block'; return; }
+  localStorage.setItem(BRAND.storageKey, k);
+  showApp();
+}
+function resetKey() { localStorage.removeItem(BRAND.storageKey); location.reload(); }
+function showApp() { document.getElementById('setupScreen').style.display = 'none'; document.getElementById('mainApp').style.display = 'block'; }
+window.onload = function() { if (getKey()) showApp(); };
+document.getElementById('keyInput').addEventListener('keydown', function(e) { if (e.key === 'Enter') activateKey(); });
+
+// File handling
+var dropZone = document.getElementById('dropZone');
+dropZone.addEventListener('click', function() { document.getElementById('fileInput').click(); });
+dropZone.addEventListener('dragover', function(e) { e.preventDefault(); dropZone.classList.add('over'); });
+dropZone.addEventListener('dragleave', function() { dropZone.classList.remove('over'); });
+dropZone.addEventListener('drop', function(e) { e.preventDefault(); dropZone.classList.remove('over'); addFiles(e.dataTransfer.files); });
+
+function addFiles(fl) {
+  var pdfs = Array.from(fl).filter(function(f) { return f.type === 'application/pdf'; });
+  if (!pdfs.length) { showErr('PDF files only.'); return; }
+  files = files.concat(pdfs);
+  renderFiles();
+  hideErr();
+  document.getElementById('btnAnalyse').disabled = false;
+}
+function renderFiles() {
+  var html = files.map(function(f, i) {
+    return '<div class="file-item">📎 ' + f.name + ' <span style="color:#666">(' + Math.round(f.size/1024) + ' KB)</span><button onclick="removeFile(' + i + ')">✕</button></div>';
+  }).join('');
+  if (files.length) html += '<div class="pwd-warn">🔒 <strong>Password-protected PDFs cannot be processed.</strong> Export as unprotected PDF first.</div>';
+  document.getElementById('fileList').innerHTML = html;
+}
+function removeFile(i) { files.splice(i, 1); renderFiles(); if (!files.length) document.getElementById('btnAnalyse').disabled = true; }
+function showErr(m) { var e = document.getElementById('errBox'); e.textContent = m; e.style.display = 'block'; }
+function hideErr() { document.getElementById('errBox').style.display = 'none'; }
+function updateRentalHint() {
+  var v = parseFloat(document.getElementById('rentalInput').value);
+  document.getElementById('rentalHint').textContent = v && !isNaN(v) ? 'Annualised: R ' + (v * 12).toLocaleString('en-ZA', {minimumFractionDigits:2}) : '';
+}
+
+function toB64(file) {
+  return new Promise(function(res, rej) {
+    var r = new FileReader();
+    r.onload = function() { res(r.result.split(',')[1]); };
+    r.onerror = rej;
+    r.readAsDataURL(file);
+  });
+}
+
+var msgTimer;
+var msgs = ['Reading statements...','Scanning for returned debits...','Assessing income and debt profile...','Running AML / FICA checks...','Finalising credit assessment...','Still working — large statements take up to 2 minutes...'];
+var msgIdx = 0;
+
+async function analyse() {
+  var key = getKey();
+  if (!key) { showErr('No API key found. Please refresh and re-enter your key.'); return; }
+  if (!files.length) { showErr('Upload at least one PDF.'); return; }
+  var btn = document.getElementById('btnAnalyse');
+  btn.disabled = true; msgIdx = 0; btn.textContent = '⏳ ' + msgs[0];
+  msgTimer = setInterval(function() { msgIdx = Math.min(msgIdx+1, msgs.length-1); btn.textContent = '⏳ ' + msgs[msgIdx]; }, 15000);
+  document.getElementById('results').innerHTML = '';
+  hideErr();
+  try {
+    var blocks = [];
+    for (var i = 0; i < files.length; i++) {
+      var b64 = await toB64(files[i]);
+      blocks.push({ type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: b64 } });
+    }
+    blocks.push({ type: 'text', text: 'Analyse these ' + files.length + ' bank statement(s). Return ONLY valid JSON.' });
+    var resp = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-api-key': key, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
+      body: JSON.stringify({ model: 'claude-sonnet-4-6', max_tokens: 8000, system: SYSTEM, messages: [{ role: 'user', content: blocks }] })
+    });
+    var data = await resp.json();
+    if (data.error) throw new Error(data.error.message);
+    var raw = data.content.map(function(b) { return b.text || ''; }).join('').replace(/```json|```/g, '').trim();
+    lastResult = JSON.parse(raw);
+    renderResults(lastResult);
+  } catch(e) {
+    showErr('Analysis failed: ' + e.message);
+  } finally {
+    clearInterval(msgTimer);
+    btn.disabled = false;
+    btn.textContent = '🔍 Analyse Statements';
+  }
+}
+
+function z(n) { return n == null ? '—' : 'R ' + Number(n).toLocaleString('en-ZA', {minimumFractionDigits:2,maximumFractionDigits:2}); }
+function pct(n) { return n == null ? '—' : (Number(n)*100).toFixed(1) + '%'; }
+var CC = {GOOD:'#16a34a',SATISFACTORY:'#6366f1',CONCERNING:'#d97706',POOR:'#dc2626'};
+var TC = {GROWING:'#16a34a',STABLE:'#6366f1',VOLATILE:'#d97706',DECLINING:'#dc2626'};
+var AMLC = {LOW:'#16a34a',MEDIUM:'#d97706',HIGH:'#f97316',CRITICAL:'#dc2626'};
+
+function kv(label, val, color) {
+  return '<div><div class="kv-lbl">' + label + '</div><div class="kv-val" style="color:' + (color||'#e2e8f0') + '">' + (val!=null?val:'—') + '</div></div>';
+}
+function txrow(date, desc, amt, col) {
+  return '<div class="tx-row"><span><span class="tx-dt">' + (date||'') + '</span>' + (desc||'') + '</span><span style="color:' + col + ';font-weight:600">' + z(amt) + '</span></div>';
+}
+function box(title, content, accentColor) {
+  return '<div class="box' + (accentColor?' al':'' ) + '" style="' + (accentColor?'border-left-color:'+accentColor:'') + '"><div class="box-title">' + title + '</div>' + content + '</div>';
+}
+
+function renderResults(R) {
+  var ip=R.income_profile||{}, dp=R.debit_profile||{}, bp=R.balance_profile||{};
+  var od=R.overdraft_facility||{}, cc=R.credit_conduct_summary||{}, ca=R.credit_assessment||{};
+  var d=R.debt_obligations||{}, aml=R.aml_risk||{};
+  var rental=parseFloat(document.getElementById('rentalInput').value)||0;
+  var comment=document.getElementById('commentInput').value;
+  var avgIncome=ip.average_monthly_credits_excl_interaccount||ip.average_monthly_credits||0;
+  var coverage=rental&&avgIncome?parseFloat((avgIncome/rental).toFixed(2)):null;
+  var ccCol=CC[cc.overall_rating]||'#94a3b8';
+  var amlCol=AMLC[aml.overall_rating]||'#94a3b8';
+
+  var html = '';
+
+  // Action buttons
+  html += '<div class="btn-row">';
+  html += '<button class="btn-action" style="background:linear-gradient(135deg,#059669,#047857)" onclick="exportCSV()">⬇ Export CSV</button>';
+  html += '<button class="btn-action" style="background:linear-gradient(135deg,var(--brand-primary),var(--brand-primary-dark))" onclick="showCreditPaper()">📋 Credit Paper</button>';
+  html += '<button class="btn-action" style="background:linear-gradient(135deg,#7c3aed,#5b21b6)" onclick="downloadPDF()">🖨 Download PDF</button>';
+  html += '</div>';
+
+  // Conduct Banner
+  html += '<div class="conduct-banner" style="border-left-color:' + ccCol + '">';
+  html += '<div><div style="font-size:11px;color:#64748b;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">Account Conduct</div>';
+  html += '<div style="font-size:20px;font-weight:700;color:' + ccCol + '">' + (cc.overall_rating||'—') + '</div>';
+  html += '<div style="font-size:13px;color:#94a3b8;margin-top:4px;max-width:520px">' + (cc.conduct_notes||'') + '</div></div>';
+  html += '<div style="display:flex;gap:20px">';
+  html += '<div style="text-align:center"><div class="stat-big" style="color:' + (cc.rd_count>0?'#ef4444':'#16a34a') + '">' + (cc.rd_count||0) + '</div><div class="stat-lbl">RDs</div></div>';
+  html += '<div style="text-align:center"><div class="stat-big" style="color:' + (cc.excess_count>0?'#d97706':'#16a34a') + '">' + (cc.excess_count||0) + '</div><div class="stat-lbl">Excesses</div></div>';
+  html += '</div></div>';
+
+  // Account Details
+  html += box('Account Details', '<div class="kv-grid">' + kv('Bank',R.bank_name) + kv('Account Holder',R.account_holder) + kv('Account No.',R.account_number) + kv('Period',R.period) + kv('Currency',R.currency) + '</div>');
+
+  // AML
+  if (aml.overall_rating) {
+    var amlBg = {LOW:'#0f2a1a',MEDIUM:'#1c1917',HIGH:'#1a0a00',CRITICAL:'#1a0000'}[aml.overall_rating]||'#1e293b';
+    var amlBorder = {LOW:'#166534',MEDIUM:'#78350f',HIGH:'#9a3412',CRITICAL:'#7f1d1d'}[aml.overall_rating]||'#334155';
+    html += '<div style="background:' + amlBg + ';border:2px solid ' + amlBorder + ';border-radius:10px;padding:16px 20px;margin-bottom:14px">';
+    html += '<div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:10px;margin-bottom:12px">';
+    html += '<div><div style="font-size:11px;color:#64748b;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">⚠ AML / FICA Risk</div>';
+    html += '<div style="font-size:20px;font-weight:800;color:' + amlCol + '">' + aml.overall_rating + ' RISK</div>';
+    html += '<div style="font-size:12px;color:#94a3b8;margin-top:4px;max-width:480px">' + (aml.fica_recommendation||'') + '</div></div>';
+    html += '<div style="display:flex;gap:10px;flex-wrap:wrap">';
+    [[aml.velocity_ratio!=null?aml.velocity_ratio.toFixed(1)+'x':'—','Velocity',aml.pass_through_flag?'#ef4444':'#16a34a'],[aml.sanitised_references_pct!=null?aml.sanitised_references_pct+'%':'—','Opaque Refs',aml.sanitised_references_flag?'#ef4444':'#16a34a'],[aml.daily_drain_days_count??'—','Daily Drain',aml.daily_drain_flag?'#ef4444':'#16a34a']].forEach(function(x) {
+      html += '<div style="text-align:center;background:#0f172a;border-radius:8px;padding:8px 14px"><div style="font-size:18px;font-weight:800;color:' + x[2] + '">' + x[0] + '</div><div style="font-size:10px;color:#475569">' + x[1] + '</div></div>';
+    });
+    html += '</div></div>';
+    [['Pass-Through / Conduit',aml.pass_through_flag],['Structuring',aml.structuring_flag],['Opaque References >70%',aml.sanitised_references_flag],['Counterparty Concentration',aml.counterparty_concentration_flag],['Split Round Numbers',aml.split_round_number_flag],['Commodity Cover Narrative',aml.commodity_cover_flag],['Daily Drain Pattern',aml.daily_drain_flag]].forEach(function(x) {
+      html += '<div class="aml-flag" style="background:' + (x[1]?'#2d0a0a':'#0f172a') + ';border:1px solid ' + (x[1]?'#7f1d1d':'#1e293b') + ';margin-bottom:6px">';
+      html += '<span>' + (x[1]?'🔴':'🟢') + '</span><span style="color:' + (x[1]?'#fca5a5':'#475569') + '">' + x[0] + '</span></div>';
+    });
+    if (aml.top_recipients && aml.top_recipients.length) {
+      html += '<div style="margin-top:12px"><div style="font-size:11px;color:#475569;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">Top Outflow Recipients</div><div class="debt-grid">';
+      aml.top_recipients.forEach(function(rec) {
+        html += '<div class="debt-tile"><div><div style="font-size:13px;color:#e2e8f0;font-weight:600">' + rec.name + '</div><div style="font-size:11px;color:#475569">' + rec.transaction_count + ' transactions</div></div>';
+        html += '<div style="font-size:14px;font-weight:700;color:' + (aml.counterparty_concentration_flag?'#ef4444':'#94a3b8') + '">' + z(rec.total_paid) + '</div></div>';
+      });
+      html += '</div></div>';
+    }
+    html += '</div>';
+  }
+
+  // Rental Affordability
+  if (rental && avgIncome > 0) {
+    var cvColor = !coverage?'#94a3b8':coverage>=3?'#16a34a':coverage>=2?'#6366f1':coverage>=1.5?'#d97706':'#dc2626';
+    var affordable = !cc.rd_count && cc.excess_count<=2 && coverage>=1.5;
+    html += '<div class="box al" style="border-left-color:' + (affordable?'#16a34a':'#d97706') + '">';
+    html += '<div class="box-title">Rental Affordability Assessment</div>';
+    html += '<div class="kv-grid" style="margin-bottom:12px">';
+    html += kv('Proposed Monthly Rental','R '+rental.toLocaleString('en-ZA',{minimumFractionDigits:2}),'#e2e8f0');
+    html += kv('Avg Monthly Credits (Excl. Inter-account)',z(avgIncome),'#16a34a');
+    html += kv('Coverage Ratio',coverage?coverage+'x':'—',cvColor);
+    html += kv('Rental as % of Income',avgIncome?(rental/avgIncome*100).toFixed(1)+'%':'—',rental/avgIncome<=0.3?'#16a34a':rental/avgIncome<=0.5?'#d97706':'#dc2626');
+    html += '</div>';
+    html += '<div style="background:' + (affordable?'#052e16':'#1c1917') + ';border:1px solid ' + (affordable?'#166534':'#78350f') + ';border-radius:8px;padding:10px 14px">';
+    html += '<span style="font-size:13px;font-weight:700;color:' + (affordable?'#86efac':'#fcd34d') + '">' + (affordable?'✅ Rental appears AFFORDABLE':'⚠️ Rental affordability MARGINAL or UNSUPPORTED') + '</span>';
+    html += '</div></div>';
+  }
+
+  // Income
+  var incContent = '<div class="kv-grid" style="margin-bottom:10px">' + kv('Total Credits',z(ip.total_credits),'#16a34a') + kv('Avg Monthly Credits',z(ip.average_monthly_credits),'#16a34a');
+  if (ip.average_monthly_credits_excl_interaccount!=null) incContent += kv('Avg Monthly (Excl. Inter-account)',z(ip.average_monthly_credits_excl_interaccount),'#059669');
+  incContent += kv('Largest Credit',z(ip.largest_single_credit),'#6366f1') + kv('Income Trend',ip.income_trend,TC[ip.income_trend]||'#94a3b8') + '</div>';
+  incContent += '<div style="font-size:13px;color:#94a3b8;display:flex;gap:16px;flex-wrap:wrap"><span><span style="color:#475569">Primary Source: </span>' + (ip.primary_income_source||'—') + '</span>';
+  incContent += '<span><span style="color:#475569">Regularity: </span><span style="color:' + (ip.income_regularity==='REGULAR'?'#16a34a':ip.income_regularity==='MIXED'?'#d97706':'#ef4444') + '">' + (ip.income_regularity||'—') + '</span></span></div>';
+  if (ip.recurring_deposit_notes) incContent += '<div style="background:#052e16;border:1px solid #166534;border-radius:6px;padding:8px 12px;margin-top:8px;font-size:12px;color:#86efac">🔁 ' + ip.recurring_deposit_notes + '</div>';
+  html += box('Income Profile', incContent);
+
+  // Debit & Balance
+  html += '<div class="two-col">';
+  html += box('Debit Profile', kv('Total Debits',z(dp.total_debits),'#dc2626') + '<br>' + kv('Avg Monthly Debits',z(dp.average_monthly_debits),'#dc2626') + '<br>' + kv('Largest Single Debit',z(dp.largest_single_debit),'#94a3b8') + '<br>' + kv('Debit:Credit Ratio',pct(dp.debit_to_credit_ratio),dp.debit_to_credit_ratio>0.9?'#dc2626':dp.debit_to_credit_ratio>0.75?'#d97706':'#16a34a'));
+  html += box('Balance Profile', kv('Opening Balance',z(bp.opening_balance),'#94a3b8') + '<br>' + kv('Closing Balance',z(bp.closing_balance),bp.closing_balance>=0?'#16a34a':'#dc2626') + '<br>' + kv('Avg Monthly Closing',z(bp.average_monthly_closing_balance),'#6366f1') + '<br>' + kv('Lowest Balance'+(bp.lowest_balance_date?' ('+bp.lowest_balance_date+')':''),z(bp.lowest_balance_recorded),bp.lowest_balance_recorded<0?'#dc2626':'#94a3b8'));
+  html += '</div>';
+
+  // Debt Obligations
+  if (d.total_monthly_debt_commitment > 0) {
+    var debtContent = '<div class="kv-grid" style="margin-bottom:12px">' + kv('Total Monthly Debt',z(d.total_monthly_debt_commitment),'#6366f1') + kv('Debt-to-Income',pct(d.debt_to_income_ratio),d.debt_to_income_ratio>0.6?'#dc2626':d.debt_to_income_ratio>0.4?'#d97706':'#16a34a') + kv('Largest Obligation',z(d.largest_single_obligation),'#94a3b8') + kv('Largest Lender',d.largest_single_obligation_lender||'—','#94a3b8') + '</div>';
+    if (d.identified_debts && d.identified_debts.length) {
+      debtContent += '<div class="debt-grid">';
+      d.identified_debts.forEach(function(x) {
+        debtContent += '<div class="debt-tile"><div><div style="font-size:13px;color:#e2e8f0;font-weight:600">' + x.lender + '</div><div style="font-size:12px;color:#475569">' + x.description + ' · ' + x.frequency + '</div>' + (x.missed_payments>0?'<div style="font-size:11px;color:#ef4444;margin-top:2px">⚠ '+x.missed_payments+' missed</div>':'') + '</div>';
+        debtContent += '<div style="font-size:15px;font-weight:700;color:' + (x.missed_payments>0?'#ef4444':'#6366f1') + '">' + z(x.monthly_instalment) + '</div></div>';
+      });
+      debtContent += '</div>';
+    }
+    html += box('Debt Obligations', debtContent, '#6366f1');
+  }
+
+  // Overdraft
+  var odContent = '';
+  if (od.in_place) {
+    odContent += '<div class="kv-grid" style="margin-bottom:10px">' + kv('Facility Limit',z(od.limit),'#d97706') + kv('Monthly Repayment',z(od.monthly_repayment),'#e2e8f0') + kv('Excess Interest Rate',od.excess_interest_rate_percent!=null?od.excess_interest_rate_percent+'% p.a.':'—','#e2e8f0') + kv('Times Breached',od.times_limit_breached||0,od.times_limit_breached>0?'#ef4444':'#16a34a');
+    if (od.max_breach_amount!=null) odContent += kv('Max Breach Amount',z(od.max_breach_amount),'#ef4444');
+    odContent += '</div>';
+    if (od.breach_dates && od.breach_dates.length) odContent += '<div style="font-size:12px;color:#94a3b8"><span style="color:#475569">Breach dates: </span>' + od.breach_dates.join(', ') + '</div>';
+  } else { odContent = '<div style="font-size:13px;color:#475569">— No overdraft facility detected</div>'; }
+  html += box('Overdraft Facility', odContent, od.in_place?'#d97706':null);
+
+  // Top 5 Credits
+  var t5 = (R.top_5_credits||[]).map(function(t) { return txrow(t.date,t.description,t.amount,'#16a34a'); }).join('');
+  html += box('Top 5 Credits', t5||'<div style="font-size:13px;color:#475569">— None</div>');
+
+  // Excesses
+  var exTitle = 'Excesses (' + (R.excesses?R.excesses.length:0) + ')' + (od.excess_interest_rate_percent?' — Interest @ '+od.excess_interest_rate_percent+'% p.a.':'');
+  var exRows = (R.excesses||[]).map(function(e) { return txrow(e.date,e.description,e.amount,'#d97706'); }).join('');
+  html += box(exTitle, exRows||'<div style="font-size:13px;color:#475569">— No excesses detected</div>', R.excesses&&R.excesses.length?'#d97706':null);
+
+  // RDs
+  if (R.returned_debits && R.returned_debits.length) {
+    html += '<div style="background:#1a0000;border:2px solid #dc2626;border-radius:10px;padding:16px 20px;margin-bottom:14px">';
+    html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px">';
+    html += '<div style="display:flex;align-items:center;gap:10px"><span style="font-size:22px">🚨</span><div>';
+    html += '<div style="font-size:14px;font-weight:800;color:#ef4444;text-transform:uppercase">Returned Debits — ' + R.returned_debits.length + ' RD' + (R.returned_debits.length>1?'s':'') + '</div>';
+    html += '<div style="font-size:12px;color:#f87171;margin-top:2px">Automatic DECLINE — debit order failures present</div></div></div>';
+    html += '<div style="background:#dc2626;color:#fff;font-weight:800;font-size:18px;border-radius:8px;padding:6px 16px">DECLINE</div></div>';
+    html += '<table class="rd-table"><thead><tr><th>#</th><th>Date</th><th>Description</th><th style="text-align:right">Amount</th></tr></thead><tbody>';
+    R.returned_debits.forEach(function(rd, i) {
+      html += '<tr style="background:' + (i%2===0?'#200000':'#1a0000') + '"><td style="color:#f87171;font-weight:700">' + (i+1) + '</td><td style="color:#fca5a5;font-weight:600">' + (rd.date||'—') + '</td><td style="color:#fecaca">' + rd.description + '</td><td style="color:#ef4444;font-weight:700;text-align:right">' + z(rd.amount) + '</td></tr>';
+    });
+    html += '</tbody></table></div>';
+  } else {
+    html += box('Returned Debits / RDs (0)', '<div style="font-size:13px;color:#475569">— No returned debits detected</div>');
+  }
+
+  // Credit Assessment
+  var strHtml = (ca.strengths||[]).map(function(s) { return '<div class="assess-item">✔ ' + s + '</div>'; }).join('');
+  var conHtml = (ca.concerns||[]).map(function(c) { return '<div class="assess-item">⚠ ' + c + '</div>'; }).join('');
+  var assessContent = '<div class="two-assess"><div><div class="assess-lbl" style="color:#16a34a">Strengths</div>' + strHtml + '</div><div><div class="assess-lbl" style="color:#d97706">Concerns</div>' + conHtml + '</div></div>';
+  assessContent += '<div class="rec-box"><div class="rec-lbl">Analyst Recommendation</div><div class="rec-txt">' + (ca.recommendation||'—') + '</div></div>';
+  if (comment) assessContent += '<div class="rec-box" style="margin-top:10px;border-left:3px solid var(--brand-primary)"><div class="rec-lbl">Analyst Comment</div><div class="rec-txt">' + comment + '</div></div>';
+  html += box('Credit Assessment', assessContent);
+
+  // Fraud Flags
+  if (R.fraud_flags && R.fraud_flags.length) {
+    var ffHtml = R.fraud_flags.map(function(f) { return '<div style="display:flex;gap:10px;padding:7px 0;border-bottom:1px solid #0f172a;font-size:13px;color:#fca5a5"><span>⚠️</span><span>' + f + '</span></div>'; }).join('');
+    html += box('Fraud Flags (' + R.fraud_flags.length + ')', ffHtml, '#ef4444');
+  }
+
+  // Analyst Notes
+  if (R.analyst_notes) html += box('Analyst Notes', '<p style="font-size:13px;color:#94a3b8;line-height:1.7">' + R.analyst_notes + '</p>');
+
+  document.getElementById('results').innerHTML = html;
+}
+
+// CSV Export
+function exportCSV() {
+  if (!lastResult) return;
+  var R=lastResult, ip=R.income_profile||{}, dp=R.debit_profile||{}, bp=R.balance_profile||{};
+  var od=R.overdraft_facility||{}, cc=R.credit_conduct_summary||{}, ca=R.credit_assessment||{}, d=R.debt_obligations||{};
+  var esc=function(v){var s=v==null?'':String(v);return(s.includes(',')||s.includes('"')||s.includes('\n'))?'"'+s.replace(/"/g,'""')+'"':s;};
+  var H=['Account Holder','Bank','Account No','Period','Total Credits','Avg Monthly Credits','Avg Monthly Credits Excl Interaccount','Income Trend','Income Regularity','Total Debits','Debit:Credit Ratio','Opening Balance','Closing Balance','Avg Monthly Closing','Lowest Balance','OD In Place','OD Limit','OD Breaches','OD Excess Rate','Total Monthly Debt','DTI','RD Count','Excess Count','Conduct Rating','Conduct Notes','Strengths','Concerns','Recommendation','AML Rating','Analyst Notes'];
+  var V=[R.account_holder,R.bank_name,R.account_number,R.period,ip.total_credits,ip.average_monthly_credits,ip.average_monthly_credits_excl_interaccount,ip.income_trend,ip.income_regularity,dp.total_debits,dp.debit_to_credit_ratio,bp.opening_balance,bp.closing_balance,bp.average_monthly_closing_balance,bp.lowest_balance_recorded,od.in_place?'Yes':'No',od.limit,od.times_limit_breached,od.excess_interest_rate_percent?od.excess_interest_rate_percent+'%':'',d.total_monthly_debt_commitment,d.debt_to_income_ratio!=null?(d.debt_to_income_ratio*100).toFixed(1)+'%':'',cc.rd_count,cc.excess_count,cc.overall_rating,cc.conduct_notes,(ca.strengths||[]).join(' | '),(ca.concerns||[]).join(' | '),ca.recommendation,(R.aml_risk||{}).overall_rating,R.analyst_notes];
+  var csv=[H.map(esc).join(','),V.map(esc).join(',')].join('\n');
+  var a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));
+  a.download='BankAnalysis_'+(R.account_holder||'export').replace(/\s+/g,'_')+'_'+Date.now()+'.csv';
+  a.click();
+}
+
+// PDF Download
+function downloadPDF() {
+  var el = document.getElementById('results');
+  if (!el) return;
+  window.print();
+}
+
+// Credit Paper
+function showCreditPaper() {
+  if (!lastResult) return;
+  var R=lastResult, ip=R.income_profile||{}, dp=R.debit_profile||{}, bp=R.balance_profile||{};
+  var od=R.overdraft_facility||{}, cc=R.credit_conduct_summary||{}, ca=R.credit_assessment||{};
+  var d=R.debt_obligations||{}, aml=R.aml_risk||{};
+  var rental=parseFloat(document.getElementById('rentalInput').value)||0;
+  var comment=document.getElementById('commentInput').value;
+  var avgIncome=ip.average_monthly_credits_excl_interaccount||ip.average_monthly_credits||0;
+  var coverage=rental&&avgIncome?parseFloat((avgIncome/rental).toFixed(2)):null;
+  var isDecline = (ca.recommendation||'').toUpperCase().startsWith('DECLINE');
+  var verdictBg = isDecline ? '#fee2e2' : '#f0fdf4';
+  var verdictBorder = isDecline ? '#dc2626' : '#16a34a';
+  var verdictColor = isDecline ? '#dc2626' : '#16a34a';
+  var today = new Date().toLocaleDateString('en-ZA',{day:'2-digit',month:'long',year:'numeric'});
+
+  var html = '<div class="cp-header">';
+  html += '<h2>Credit Assessment — Bank Statement Analysis</h2>';
+  html += '<p>' + BRAND.legalName + ' &nbsp;|&nbsp; Generated ' + today + '</p>';
+  html += '</div>';
+
+  html += '<button class="cp-print" onclick="window.print()">🖨 Print</button>';
+  html += '<button class="cp-close" onclick="document.getElementById(\'creditPaper\').style.display=\'none\'">✕ Close</button>';
+
+  html += '<div class="cp-body">';
+
+  // Verdict
+  html += '<div class="cp-verdict" style="background:' + verdictBg + ';border:2px solid ' + verdictBorder + ';border-radius:8px">';
+  html += '<div style="font-size:22px;font-weight:800;color:' + verdictColor + '">' + (isDecline?'DECLINE':'SUPPORT') + '</div>';
+  html += '<div style="font-size:13px;color:#374151;margin-top:4px">' + (ca.recommendation||'—') + '</div>';
+  html += '</div>';
+
+  // Client
+  html += '<div class="cp-section"><h3>Client Details</h3>';
+  html += '<div class="cp-grid">';
+  [['Account Holder',R.account_holder],['Bank',R.bank_name],['Account No.',R.account_number],['Period',R.period],['Account Conduct',cc.overall_rating],['AML Risk',aml.overall_rating]].forEach(function(x) {
+    html += '<div class="cp-row"><span class="lbl">' + x[0] + '</span><span class="val">' + (x[1]||'—') + '</span></div>';
+  });
+  html += '</div></div>';
+
+  // Income
+  html += '<div class="cp-section"><h3>Income Profile</h3><div class="cp-grid">';
+  [['Total Credits (Period)',z(ip.total_credits)],['Avg Monthly Credits',z(ip.average_monthly_credits)],['Avg Monthly (Excl. Inter-account)',z(ip.average_monthly_credits_excl_interaccount)],['Income Trend',ip.income_trend],['Income Regularity',ip.income_regularity],['Primary Source',ip.primary_income_source]].forEach(function(x) {
+    html += '<div class="cp-row"><span class="lbl">' + x[0] + '</span><span class="val">' + (x[1]||'—') + '</span></div>';
+  });
+  html += '</div></div>';
+
+  // Conduct
+  html += '<div class="cp-section"><h3>Account Conduct</h3><div class="cp-grid">';
+  [['Overall Rating',cc.overall_rating],['Returned Debits',cc.rd_count||0],['Excesses',cc.excess_count||0],['OD Facility',od.in_place?'Yes':'No'],['OD Limit',z(od.limit)],['Times OD Breached',od.times_limit_breached||0]].forEach(function(x) {
+    html += '<div class="cp-row"><span class="lbl">' + x[0] + '</span><span class="val">' + x[1] + '</span></div>';
+  });
+  if (cc.conduct_notes) html += '<div class="cp-row" style="grid-column:1/-1"><span class="lbl">Notes</span><span class="val">' + cc.conduct_notes + '</span></div>';
+  html += '</div></div>';
+
+  // Affordability
+  if (rental) {
+    html += '<div class="cp-section"><h3>Rental Affordability</h3><div class="cp-grid">';
+    [['Proposed Monthly Rental',z(rental)],['Avg Monthly Income',z(avgIncome)],['Coverage Ratio',coverage?coverage+'x':'—'],['Rental as % of Income',avgIncome?(rental/avgIncome*100).toFixed(1)+'%':'—'],['Annual Rental',z(rental*12)],['Assessment',coverage>=1.5?'Affordable':'Marginal / Unsupported']].forEach(function(x) {
+      html += '<div class="cp-row"><span class="lbl">' + x[0] + '</span><span class="val">' + x[1] + '</span></div>';
+    });
+    html += '</div></div>';
+  }
+
+  // Debt
+  if (d.total_monthly_debt_commitment > 0) {
+    html += '<div class="cp-section"><h3>Debt Obligations</h3><div class="cp-grid">';
+    [['Total Monthly Debt',z(d.total_monthly_debt_commitment)],['Debt-to-Income Ratio',pct(d.debt_to_income_ratio)],['Largest Obligation',z(d.largest_single_obligation)],['Largest Lender',d.largest_single_obligation_lender||'—']].forEach(function(x) {
+      html += '<div class="cp-row"><span class="lbl">' + x[0] + '</span><span class="val">' + x[1] + '</span></div>';
+    });
+    html += '</div>';
+    if (d.identified_debts && d.identified_debts.length) {
+      html += '<table style="width:100%;border-collapse:collapse;margin-top:10px;font-size:12px"><tr style="background:#f1f5f9"><th style="padding:5px 8px;text-align:left">Lender</th><th style="padding:5px 8px;text-align:left">Product</th><th style="padding:5px 8px;text-align:right">Instalment</th></tr>';
+      d.identified_debts.forEach(function(x) {
+        html += '<tr style="border-bottom:1px solid #e2e8f0"><td style="padding:5px 8px">' + x.lender + '</td><td style="padding:5px 8px;color:#64748b">' + x.description + '</td><td style="padding:5px 8px;text-align:right;font-weight:600">' + z(x.monthly_instalment) + '</td></tr>';
+      });
+      html += '</table>';
+    }
+    html += '</div>';
+  }
+
+  // Strengths & Concerns
+  html += '<div class="cp-section"><h3>Credit Assessment</h3>';
+  html += '<div class="cp-grid">';
+  html += '<div><div style="font-size:11px;font-weight:700;color:#16a34a;margin-bottom:6px">STRENGTHS</div>' + (ca.strengths||[]).map(function(s){return '<div style="font-size:12px;padding:3px 0;border-bottom:1px solid #f1f5f9">✔ '+s+'</div>';}).join('') + '</div>';
+  html += '<div><div style="font-size:11px;font-weight:700;color:#d97706;margin-bottom:6px">CONCERNS</div>' + (ca.concerns||[]).map(function(c){return '<div style="font-size:12px;padding:3px 0;border-bottom:1px solid #f1f5f9">⚠ '+c+'</div>';}).join('') + '</div>';
+  html += '</div></div>';
+
+  // RDs
+  if (R.returned_debits && R.returned_debits.length) {
+    html += '<div class="cp-section"><h3 style="color:#dc2626;border-color:#dc2626">Returned Debits (' + R.returned_debits.length + ')</h3>';
+    html += '<table style="width:100%;border-collapse:collapse;font-size:12px"><tr style="background:#fee2e2"><th style="padding:5px 8px;text-align:left">Date</th><th style="padding:5px 8px;text-align:left">Description</th><th style="padding:5px 8px;text-align:right">Amount</th></tr>';
+    R.returned_debits.forEach(function(rd) {
+      html += '<tr style="border-bottom:1px solid #fecaca"><td style="padding:5px 8px;color:#dc2626;font-weight:600">'+(rd.date||'—')+'</td><td style="padding:5px 8px">'+(rd.description||'')+'</td><td style="padding:5px 8px;text-align:right;font-weight:700;color:#dc2626">'+z(rd.amount)+'</td></tr>';
+    });
+    html += '</table></div>';
+  }
+
+  // Analyst Comment
+  if (comment) {
+    html += '<div class="cp-section"><h3>Analyst Comment</h3>';
+    html += '<div style="background:#f8fafc;border-left:3px solid var(--brand-primary);padding:12px 14px;border-radius:4px;font-size:13px;line-height:1.7;color:#374151">' + comment + '</div></div>';
+  }
+
+  // AML
+  html += '<div class="cp-section"><h3>AML / FICA Assessment</h3><div class="cp-grid">';
+  [['Overall AML Risk',aml.overall_rating||'—'],['Velocity Ratio',aml.velocity_ratio!=null?aml.velocity_ratio.toFixed(1)+'x':'—'],['Pass-Through Flag',aml.pass_through_flag?'⚠ YES':'No'],['Structuring Flag',aml.structuring_flag?'⚠ YES':'No'],['Opaque References',aml.sanitised_references_pct!=null?aml.sanitised_references_pct+'%':'—'],['Daily Drain Flag',aml.daily_drain_flag?'⚠ YES':'No']].forEach(function(x) {
+    html += '<div class="cp-row"><span class="lbl">' + x[0] + '</span><span class="val">' + x[1] + '</span></div>';
+  });
+  if (aml.fica_recommendation) html += '</div><div style="background:#f8fafc;padding:10px 12px;border-radius:6px;font-size:12px;color:#374151;margin-top:8px">' + aml.fica_recommendation + '</div>';
+  else html += '</div>';
+  html += '</div>';
+
+  html += '</div>'; // cp-body
+
+  document.getElementById('cpInner').innerHTML = html;
+  document.getElementById('creditPaper').style.display = 'block';
+}
+
+function pct(n) { return n == null ? '—' : (Number(n)*100).toFixed(1) + '%'; }
+</script>
+</body>
+</html>
